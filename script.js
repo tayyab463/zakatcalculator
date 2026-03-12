@@ -112,8 +112,11 @@ startBtn && startBtn.addEventListener('click', () => {
 
 // fetch live gold/silver prices (simple example using a free API)
 async function fetchPrices() {
+    const errorEl = document.getElementById('priceError');
+    errorEl.classList.add('hidden');
     try {
         const resp = await fetch('https://api.metals.live/v1/spot');
+        if (!resp.ok) throw new Error('HTTP '+resp.status);
         const data = await resp.json();
         // expected format: [{ metal: 'gold', price: 1950.12 }, { metal: 'silver', price: 24.3 }, ...]
         const goldObj = data.find(o => o.metal === 'gold');
@@ -124,8 +127,17 @@ async function fetchPrices() {
         if (silverObj) {
             silverPriceEl.value = silverObj.price.toFixed(2);
         }
+        // keep fields readonly when fetch succeeds
+        goldPriceEl.readOnly = true;
+        silverPriceEl.readOnly = true;
     } catch (e) {
         console.warn('Could not fetch metal prices, please enter manually:', e);
+        errorEl.classList.remove('hidden');
+        // allow manual input if fetching fails
+        goldPriceEl.readOnly = false;
+        silverPriceEl.readOnly = false;
+        goldPriceEl.placeholder = 'enter price';
+        silverPriceEl.placeholder = 'enter price';
     }
     calculateZakat();
 }
