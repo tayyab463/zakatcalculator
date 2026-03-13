@@ -115,18 +115,32 @@ async function fetchPrices() {
     const errorEl = document.getElementById('priceError');
     errorEl.classList.add('hidden');
     try {
+        const currency = currencySelect.value;
+        // Fetch metal prices
         const resp = await fetch('https://api.metals.live/v1/spot');
         if (!resp.ok) throw new Error('HTTP '+resp.status);
         const data = await resp.json();
-        // expected format: [{ metal: 'gold', price: 1950.12 }, { metal: 'silver', price: 24.3 }, ...]
-        const goldObj = data.find(o => o.metal === 'gold');
-        const silverObj = data.find(o => o.metal === 'silver');
-        if (goldObj) {
-            goldPriceEl.value = goldObj.price.toFixed(2);
+        // API returns array like: [{"metal":"XAU","price":1950.12,"currency":"USD"}, {"metal":"XAG","price":24.3,"currency":"USD"}]
+        const goldObj = data.find(o => o.metal === 'XAU');
+        const silverObj = data.find(o => o.metal === 'XAG');
+        let goldPrice = goldObj ? goldObj.price : 0;
+        let silverPrice = silverObj ? silverObj.price : 0;
+
+        // If not USD, convert using exchange rate
+        if (currency !== 'USD') {
+            const rateResp = await fetch(`https://api.exchangerate-api.com/v4/latest/USD`);
+            if (!rateResp.ok) throw new Error('Exchange rate fetch failed');
+            const rateData = await rateResp.json();
+            const rate = rateData.rates[currency];
+            if (rate) {
+                goldPrice *= rate;
+                silverPrice *= rate;
+            }
         }
-        if (silverObj) {
-            silverPriceEl.value = silverObj.price.toFixed(2);
-        }
+
+        goldPriceEl.value = goldPrice.toFixed(2);
+        silverPriceEl.value = silverPrice.toFixed(2);
+
         // keep fields readonly when fetch succeeds
         goldPriceEl.readOnly = true;
         silverPriceEl.readOnly = true;
@@ -150,3 +164,4 @@ currencySelect.addEventListener('change', () => {
 
 // initial compute + price load
 fetchPrices();
+
